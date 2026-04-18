@@ -607,17 +607,50 @@ function genDouble(data, sr) {
 }
 
 // ── Wake lock (screen on) ──
+// ── Wake Lock (screen on) ──
 let wakeLock = null;
+let noSleepVideo = null;
+
 async function requestWakeLock() {
+  // Method 1: Wake Lock API (Safari 16.4+)
   try {
     if ('wakeLock' in navigator) {
       wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+      return;
     }
   } catch(e){}
+
+  // Method 2: Fallback - 無音動画ループで消灯防止
+  if (!noSleepVideo) {
+    noSleepVideo = document.createElement('video');
+    noSleepVideo.setAttribute('playsinline', '');
+    noSleepVideo.setAttribute('webkit-playsinline', '');
+    noSleepVideo.style.position = 'fixed';
+    noSleepVideo.style.top = '-1px';
+    noSleepVideo.style.left = '-1px';
+    noSleepVideo.style.width = '1px';
+    noSleepVideo.style.height = '1px';
+    noSleepVideo.style.opacity = '0.01';
+    // Tiny MP4 with no audio - keeps screen awake
+    noSleepVideo.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAu1tZGF0AAACrQYF//+p3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE1MiByMjg1NCBlOWE1OTAzIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNyAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTI1IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAD2WIhAA3//728P4FNjuY0AAAAAhBmiJsQ/8KgAAAAARBnkJ4j/8AAAAABEGeYniP/wAAAAJBmoRJqEFomUwIb//+jLAAAAATQZ6iRRUsK/8AAAAIAZrBdRP/AAAACAGawXYT/wAAAAkBmsVJqEFsmUwIb//+jLAAAAATQZ7kRRUsK/8AAAAIAZsEdRP/AAAACAGbBHYT/w==';
+    noSleepVideo.loop = true;
+    document.body.appendChild(noSleepVideo);
+  }
+  try { await noSleepVideo.play(); } catch(e){}
 }
+
 function releaseWakeLock() {
   if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  if (noSleepVideo) { noSleepVideo.pause(); }
 }
+
+// Re-acquire wake lock when page becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isRunning) {
+    requestWakeLock();
+  }
+});
 
 // ── Init ──
 window.addEventListener('resize', resize);
@@ -637,8 +670,8 @@ updateControls();
 
 // Keep screen on while running
 setInterval(() => {
-  if (isRunning && !wakeLock) requestWakeLock();
-  else if (!isRunning && wakeLock) releaseWakeLock();
+  if (isRunning && !wakeLock && !noSleepVideo?.paused === false) requestWakeLock();
+  else if (!isRunning) releaseWakeLock();
 }, 1000);
 </script>
 </body>
