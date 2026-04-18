@@ -30,7 +30,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .flip-digit .half-top .inner{background:#2a2e38}
 .flip-digit .half-bottom .inner{background:#222636}
 .flip-digit .half .inner{width:100%;height:200%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;font-style:normal;color:#f2f4fa;font-size:var(--font-size);line-height:1}
-.flip-digit .num{display:inline-block;transform:scaleY(1.2)}
+.flip-digit .num{display:inline-block}
 .flip-digit .half-bottom .inner{margin-top:-100%}
 .flip-digit .divider{position:absolute;top:50%;left:0;width:100%;height:max(1.5px,calc(var(--dh)*0.008));background:rgba(0,0,0,0.4);transform:translateY(-50%);z-index:5}
 
@@ -294,7 +294,7 @@ function resize() {
   const isLandscape = w > h;
   const sh = showHours();
   const wFactor = sh ? 7.18 : 4.62;
-  const aspect = 1.55;
+  const aspect = 1.65;
 
   // Orientation-adaptive: less space for controls in landscape
   const controlsH = isLandscape ? 105 : 140;
@@ -310,7 +310,7 @@ function resize() {
   document.documentElement.style.setProperty('--dw', dw + 'px');
   document.documentElement.style.setProperty('--dh', dh + 'px');
   document.documentElement.style.setProperty('--inner-gap', (dw * 0.06) + 'px');
-  document.documentElement.style.setProperty('--font-size', (dh * 0.72) + 'px');
+  document.documentElement.style.setProperty('--font-size', (dh * 0.82) + 'px');
   document.documentElement.style.setProperty('--btn-size', Math.min(dw * 0.35, 48) + 'px');
   document.documentElement.style.setProperty('--main-size', Math.min(dw * 0.45, 64) + 'px');
 
