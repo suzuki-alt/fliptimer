@@ -24,21 +24,21 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .section{display:flex;align-items:center;touch-action:none}
 .digit-pair{display:flex;gap:var(--inner-gap)}
 
-/* Flip digit — clip-path方式：上下を正確に50%で切り出し */
+/* Flip digit — clip-path方式：上下を0.4%重ねて隙間を完全に消す */
 .flip-digit{position:relative;width:var(--dw);height:var(--dh);overflow:visible}
 .flip-digit .half{position:absolute;left:0;top:0;width:100%;height:100%}
-.flip-digit .half-top{clip-path:inset(0 0 50% 0 round calc(var(--dw)*0.065) calc(var(--dw)*0.065) 0 0)}
-.flip-digit .half-bottom{clip-path:inset(50% 0 0 0 round 0 0 calc(var(--dw)*0.065) calc(var(--dw)*0.065))}
+.flip-digit .half-top{clip-path:inset(0 0 49.6% 0 round calc(var(--dw)*0.065) calc(var(--dw)*0.065) 0 0)}
+.flip-digit .half-bottom{clip-path:inset(49.6% 0 0 0 round 0 0 calc(var(--dw)*0.065) calc(var(--dw)*0.065))}
 .flip-digit .half .inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;font-style:normal;color:#f2f4fa;font-size:var(--font-size);line-height:1}
 .flip-digit .half-top .inner{background:#2a2e38}
 .flip-digit .half-bottom .inner{background:#222636}
 .flip-digit .num{display:inline-block;transform:scaleY(1.2)}
-.flip-digit .divider{position:absolute;top:50%;left:0;width:100%;height:max(1.5px,calc(var(--dh)*0.008));background:rgba(0,0,0,0.4);transform:translateY(-50%);z-index:5}
+.flip-digit .divider{position:absolute;top:50%;left:0;width:100%;height:max(2px,calc(var(--dh)*0.012));background:rgba(0,0,0,0.5);transform:translateY(-50%);z-index:15;pointer-events:none}
 
-/* Flap animations — clip-path方式 */
+/* Flap animations — clip-path方式：同様に0.4%重ねる */
 .flip-digit .flap{position:absolute;left:0;top:0;width:100%;height:100%;z-index:10;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.flip-digit .flap-top{clip-path:inset(0 0 50% 0 round calc(var(--dw)*0.065) calc(var(--dw)*0.065) 0 0);transform-origin:center 50%}
-.flip-digit .flap-bottom{clip-path:inset(50% 0 0 0 round 0 0 calc(var(--dw)*0.065) calc(var(--dw)*0.065));transform-origin:center 50%}
+.flip-digit .flap-top{clip-path:inset(0 0 49.6% 0 round calc(var(--dw)*0.065) calc(var(--dw)*0.065) 0 0);transform-origin:center 50%}
+.flip-digit .flap-bottom{clip-path:inset(49.6% 0 0 0 round 0 0 calc(var(--dw)*0.065) calc(var(--dw)*0.065));transform-origin:center 50%}
 .flip-digit .flap .inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;color:#f2f4fa;font-size:var(--font-size);line-height:1}
 .flip-digit .flap-top .inner{background:#2a2e38}
 .flip-digit .flap-bottom .inner{background:#222636}
@@ -96,7 +96,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
     <div id="controls"></div>
   </div>
 </div>
-<div id="ver" style="position:fixed;bottom:2px;right:6px;font-size:10px;color:rgba(255,255,255,0.15);z-index:1">v4</div>
+<div id="ver" style="position:fixed;bottom:2px;right:6px;font-size:10px;color:rgba(255,255,255,0.15);z-index:1">v5</div>
 <div id="overlay">
   <h1>TIME'S UP</h1>
   <button onclick="doReset()">リスタート</button>
