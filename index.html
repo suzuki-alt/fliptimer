@@ -11,9 +11,11 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 html,body{width:100%;height:100%;overflow:hidden;background:#131520;font-family:-apple-system,sans-serif}
-body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 
-#app{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;position:relative}
+#app{display:flex;flex-direction:column;align-items:center;width:100%;height:100%;position:relative}
+#clock-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;min-height:0}
+#bottom-panel{display:flex;flex-direction:column;align-items:center;width:100%;flex-shrink:0}
 
 /* Clock row */
 #clock{display:flex;align-items:center;justify-content:center}
@@ -27,7 +29,8 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .flip-digit .half-bottom{bottom:0;border-radius:0 0 calc(var(--dw)*0.065) calc(var(--dw)*0.065)}
 .flip-digit .half-top .inner{background:#2a2e38}
 .flip-digit .half-bottom .inner{background:#222636}
-.flip-digit .half .inner{width:100%;height:200%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;font-style:normal;color:#f2f4fa;font-size:var(--font-size);transform:scaleY(1.2);line-height:1}
+.flip-digit .half .inner{width:100%;height:200%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;font-style:normal;color:#f2f4fa;font-size:var(--font-size);line-height:1}
+.flip-digit .num{display:inline-block;transform:scaleY(1.2)}
 .flip-digit .half-bottom .inner{margin-top:-100%}
 .flip-digit .divider{position:absolute;top:50%;left:0;width:100%;height:max(1.5px,calc(var(--dh)*0.008));background:rgba(0,0,0,0.4);transform:translateY(-50%);z-index:5}
 
@@ -35,7 +38,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .flip-digit .flap{position:absolute;left:0;width:100%;height:50%;overflow:hidden;z-index:10;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .flip-digit .flap-top{top:0;transform-origin:bottom center;border-radius:calc(var(--dw)*0.065) calc(var(--dw)*0.065) 0 0}
 .flip-digit .flap-bottom{bottom:0;transform-origin:top center;border-radius:0 0 calc(var(--dw)*0.065) calc(var(--dw)*0.065)}
-.flip-digit .flap .inner{width:100%;height:200%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;color:#f2f4fa;font-size:var(--font-size);transform:scaleY(1.2);line-height:1}
+.flip-digit .flap .inner{width:100%;height:200%;display:flex;align-items:center;justify-content:center;font-family:'HelveticaNeue-CondensedBlack','Helvetica Neue',sans-serif;font-weight:900;color:#f2f4fa;font-size:var(--font-size);line-height:1}
 .flip-digit .flap-top .inner{background:#2a2e38}
 .flip-digit .flap-bottom .inner{background:#222636;margin-top:-100%}
 
@@ -53,19 +56,19 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .label-gap{width:calc(var(--dw)*0.14*2 + var(--dw)*0.22)}
 
 /* Presets */
-#presets{display:flex;gap:10px;margin-top:auto;padding-bottom:14px}
+#presets{display:flex;gap:10px;padding-bottom:8px}
 #presets button{border:none;font-size:16px;font-weight:700;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.14);border-radius:20px;width:50px;height:34px;cursor:pointer;font-family:system-ui,-apple-system,sans-serif}
 #presets button.active{color:#fff;background:rgba(64,115,235,0.9)}
 #presets button:disabled{opacity:0.3}
 
 /* Sound picker */
-#sounds{display:flex;align-items:center;gap:8px;padding-bottom:16px}
+#sounds{display:flex;align-items:center;gap:8px;padding-bottom:8px}
 #sounds .icon{font-size:11px;color:rgba(255,255,255,0.35)}
 #sounds button{border:none;font-size:13px;font-weight:600;color:rgba(255,255,255,0.45);background:rgba(255,255,255,0.12);border-radius:20px;padding:6px 12px;cursor:pointer}
 #sounds button.active{color:#fff;background:rgba(64,115,235,0.8)}
 
 /* Controls */
-#controls{display:flex;align-items:center;gap:calc(var(--btn-size)*0.9);padding-bottom:24px}
+#controls{display:flex;align-items:center;gap:calc(var(--btn-size)*0.9);padding-bottom:max(16px,env(safe-area-inset-bottom))}
 .ctrl-btn{border:none;width:var(--btn-size);height:var(--btn-size);border-radius:50%;background:rgba(255,255,255,0.13);color:rgba(255,255,255,0.48);font-size:calc(var(--btn-size)*0.36);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .ctrl-btn:disabled{opacity:0.25}
 #playBtn{width:var(--main-size);height:var(--main-size);border-radius:50%;border:none;background:rgba(64,115,235,0.9);color:#fff;font-size:calc(var(--main-size)*0.38);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -80,14 +83,17 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 </head>
 <body>
 <div id="app">
-  <div id="clock"></div>
-  <div id="labels"></div>
-  <div style="flex:1"></div>
-  <div id="presets"></div>
-  <div id="sounds">
-    <span class="icon">🔊</span>
+  <div id="clock-area">
+    <div id="clock"></div>
+    <div id="labels"></div>
   </div>
-  <div id="controls"></div>
+  <div id="bottom-panel">
+    <div id="presets"></div>
+    <div id="sounds">
+      <span class="icon">🔊</span>
+    </div>
+    <div id="controls"></div>
+  </div>
 </div>
 <div id="overlay">
   <h1>TIME'S UP</h1>
@@ -116,8 +122,8 @@ function createDigit(id) {
   const el = document.createElement('div');
   el.className = 'flip-digit';
   el.innerHTML = `
-    <div class="half half-top"><div class="inner">0</div></div>
-    <div class="half half-bottom"><div class="inner">0</div></div>
+    <div class="half half-top"><div class="inner"><span class="num">0</span></div></div>
+    <div class="half half-bottom"><div class="inner"><span class="num">0</span></div></div>
     <div class="divider"></div>`;
   digits[id] = { el, current: 0, animating: false };
   return el;
@@ -141,13 +147,13 @@ function setDigit(id, val) {
   // Create top flap (old digit, peels down)
   const flapTop = document.createElement('div');
   flapTop.className = 'flap flap-top';
-  flapTop.innerHTML = `<div class="inner" style="background:#2a2e38">${prev}</div>`;
+  flapTop.innerHTML = `<div class="inner" style="background:#2a2e38"><span class="num">${prev}</span></div>`;
   flapTop.style.transform = 'perspective(' + (d.el.offsetWidth * 3.5) + 'px) rotateX(0deg)';
   flapTop.style.transition = 'none';
   d.el.appendChild(flapTop);
 
   // Update base: top shows new, bottom shows old (until bottom flap)
-  topHalf.textContent = val;
+  topHalf.innerHTML = '<span class="num">' + val + '</span>';
 
   requestAnimationFrame(() => {
     const persp = d.el.offsetWidth * 3.5;
@@ -159,13 +165,13 @@ function setDigit(id, val) {
       // Phase 2: bottom flap
       const flapBot = document.createElement('div');
       flapBot.className = 'flap flap-bottom';
-      flapBot.innerHTML = `<div class="inner" style="background:#222636">${val}</div>`;
+      flapBot.innerHTML = `<div class="inner" style="background:#222636"><span class="num">${val}</span></div>`;
       flapBot.style.transform = 'perspective(' + persp + 'px) rotateX(90deg)';
       flapBot.style.transition = 'none';
       d.el.appendChild(flapBot);
 
       flapTop.remove();
-      botHalf.textContent = prev; // still shows old under flap
+      botHalf.innerHTML = '<span class="num">' + prev + '</span>'; // still shows old under flap
 
       requestAnimationFrame(() => {
         flapBot.style.transition = 'transform 0.32s cubic-bezier(0.22,1,0.36,1)';
@@ -174,7 +180,7 @@ function setDigit(id, val) {
 
       setTimeout(() => {
         flapBot.remove();
-        botHalf.textContent = val;
+        botHalf.innerHTML = '<span class="num">' + val + '</span>';
         d.animating = false;
       }, 400);
     }, 150);
@@ -285,11 +291,14 @@ function updateDigits() {
 let lastShowH = null;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
+  const isLandscape = w > h;
   const sh = showHours();
   const wFactor = sh ? 7.18 : 4.62;
   const aspect = 1.55;
-  const controlsH = 200;
-  const hPad = w * 0.03;
+
+  // Orientation-adaptive: less space for controls in landscape
+  const controlsH = isLandscape ? 105 : 140;
+  const hPad = Math.max(12, w * 0.02);
 
   const availW = w - hPad * 2;
   const availH = h - controlsH;
@@ -302,8 +311,12 @@ function resize() {
   document.documentElement.style.setProperty('--dh', dh + 'px');
   document.documentElement.style.setProperty('--inner-gap', (dw * 0.06) + 'px');
   document.documentElement.style.setProperty('--font-size', (dh * 0.72) + 'px');
-  document.documentElement.style.setProperty('--btn-size', Math.min(dw * 0.32, 48) + 'px');
-  document.documentElement.style.setProperty('--main-size', Math.min(dw * 0.42, 60) + 'px');
+  document.documentElement.style.setProperty('--btn-size', Math.min(dw * 0.35, 48) + 'px');
+  document.documentElement.style.setProperty('--main-size', Math.min(dw * 0.45, 64) + 'px');
+
+  // Compact bottom panel spacing in landscape
+  const bp = document.getElementById('bottom-panel');
+  if (bp) bp.style.gap = isLandscape ? '2px' : '4px';
 
   if (lastShowH !== sh) {
     lastShowH = sh;
