@@ -96,7 +96,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
     <div id="controls"></div>
   </div>
 </div>
-<div id="ver" style="position:fixed;bottom:2px;right:6px;font-size:10px;color:rgba(255,255,255,0.15);z-index:1">v7</div>
+<div id="ver" style="position:fixed;bottom:2px;right:6px;font-size:10px;color:rgba(255,255,255,0.15);z-index:1">v8</div>
 <div id="overlay">
   <h1>TIME'S UP</h1>
   <button onclick="doReset()">リスタート</button>
@@ -404,8 +404,8 @@ function start() {
   if (totalSeconds <= 0) return;
   isRunning = true;
   requestWakeLock();
-  // ユーザージェスチャー内でAudioContextを確実にアンロック＋チャイム事前デコード
-  const _ctx = getAudioCtx(); _ctx.resume();
+  // ユーザージェスチャー内でAudioContextをアンロック＋生かし続ける＋チャイム事前デコード
+  startAudioKeepAlive();
   ensureChimeBuffer();
   timerInterval = setInterval(() => {
     totalSeconds--;
@@ -427,6 +427,7 @@ function start() {
 function pause() {
   isRunning = false;
   clearInterval(timerInterval);
+  stopAudioKeepAlive();
   updateControls();
   updatePresets();
 }
@@ -436,6 +437,7 @@ function doReset() {
   clearInterval(timerInterval);
   totalSeconds = initialSeconds;
   stopAlarm();
+  stopAudioKeepAlive();
   document.getElementById('overlay').classList.remove('show');
   resize();
   updateDigits();
@@ -507,6 +509,30 @@ function getAudioCtx() {
   return audioCtx;
 }
 
+// AudioContextを生かし続ける（長時間タイマー後もアラームを確実に鳴らすため）
+let keepAliveNode = null;
+function startAudioKeepAlive() {
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  if (keepAliveNode) return;
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0015;
+    osc.frequency.value = 20000; // 可聴域外
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    keepAliveNode = { osc, gain };
+  } catch(e) {}
+}
+function stopAudioKeepAlive() {
+  if (keepAliveNode) {
+    try { keepAliveNode.osc.stop(); } catch(e){}
+    keepAliveNode = null;
+  }
+}
+
 // チャイムWAVをAudioBufferに事前デコード
 async function ensureChimeBuffer() {
   if (chimeBuffer) return;
@@ -520,31 +546,33 @@ async function ensureChimeBuffer() {
   } catch(e) { console.error('chime decode:', e); }
 }
 
+let genBuffers = {};
+
 function playAlarm() {
   stopAlarm();
-  const ctx = getAudioCtx();
-  ctx.resume();
-  if (selectedSound === 'チャイム') {
-    playChimeWav();
-  } else {
-    playGeneratedSound(selectedSound);
-  }
-}
-
-function playChimeWav() {
-  const ctx = getAudioCtx();
-  ctx.resume();
-  if (!chimeBuffer) {
-    ensureChimeBuffer().then(() => { if (chimeBuffer && alarmInterval === null) { alarmInterval = true; playChimeLoop(); } });
-    alarmInterval = true;
-    return;
-  }
   alarmInterval = true;
-  playChimeLoop();
+  const ctx = getAudioCtx();
+  const fire = () => {
+    if (!alarmInterval) return;
+    if (selectedSound === 'チャイム') playChimeLoop();
+    else playGeneratedLoop(selectedSound);
+  };
+  // AudioContextが眠っていたら起こしてから再生（iOS対策）
+  if (ctx.state !== 'running' && ctx.resume) {
+    ctx.resume().then(fire).catch(fire);
+    // resumeが返らない場合の保険として再生を試みる
+    setTimeout(() => { if (alarmInterval && !currentSource) fire(); }, 250);
+  } else {
+    fire();
+  }
 }
 
 function playChimeLoop() {
-  if (!alarmInterval || !chimeBuffer) return;
+  if (!alarmInterval) return;
+  if (!chimeBuffer) {
+    ensureChimeBuffer().then(() => { if (alarmInterval && !currentSource) playChimeLoop(); });
+    return;
+  }
   const ctx = getAudioCtx();
   const src = ctx.createBufferSource();
   src.buffer = chimeBuffer;
@@ -554,30 +582,24 @@ function playChimeLoop() {
   src.onended = () => { if (alarmInterval) playChimeLoop(); };
 }
 
-function playGeneratedSound(name) {
+function playGeneratedLoop(name) {
+  if (!alarmInterval) return;
   const ctx = getAudioCtx();
-  ctx.resume();
-  const sr = ctx.sampleRate;
-
-  let dur, genFn;
-  if (name === '鈴') { dur = 1.4; genFn = genSuzu; }
-  else { dur = 2.0; genFn = genDouble; }
-
-  const len = Math.floor(sr * dur);
-  const buffer = ctx.createBuffer(1, len, sr);
-  const data = buffer.getChannelData(0);
-  genFn(data, sr);
-
-  function playLoop() {
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    src.connect(ctx.destination);
-    src.start();
-    currentSource = src;
-    src.onended = () => { if (alarmInterval) playLoop(); };
+  if (!genBuffers[name]) {
+    const sr = ctx.sampleRate;
+    let dur, genFn;
+    if (name === '鈴') { dur = 1.4; genFn = genSuzu; }
+    else { dur = 2.0; genFn = genDouble; }
+    const buffer = ctx.createBuffer(1, Math.floor(sr * dur), sr);
+    genFn(buffer.getChannelData(0), sr);
+    genBuffers[name] = buffer;
   }
-  alarmInterval = true;
-  playLoop();
+  const src = ctx.createBufferSource();
+  src.buffer = genBuffers[name];
+  src.connect(ctx.destination);
+  src.start();
+  currentSource = src;
+  src.onended = () => { if (alarmInterval) playGeneratedLoop(name); };
 }
 
 function stopAlarm() {
@@ -589,11 +611,12 @@ function previewSound(name) {
   stopAlarm();
   const ctx = getAudioCtx();
   ctx.resume();
+  alarmInterval = true;
   if (name === 'チャイム') {
-    playChimeWav();
+    playChimeLoop();
     setTimeout(stopAlarm, 4000);
   } else {
-    playGeneratedSound(name);
+    playGeneratedLoop(name);
     setTimeout(stopAlarm, 3000);
   }
 }
@@ -655,7 +678,6 @@ function genDouble(data, sr) {
 let wakeLock = null;
 let noSleepVideo = null;
 let noSleepRefreshId = null;
-let noSleepAudioNode = null;
 
 async function requestWakeLock() {
   // Method 1: Wake Lock API (Safari 16.4+ / iPadOS 16.4+)
@@ -692,38 +714,19 @@ async function requestWakeLock() {
       }
     }, 10000);
   }
-
-  // Method 3: 無音オーディオ (追加のスリープ防止)
-  if (!noSleepAudioNode) {
-    try {
-      const ctx = getAudioCtx();
-      ctx.resume();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      gain.gain.value = 0.001;
-      osc.frequency.value = 20000;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      noSleepAudioNode = { osc, gain };
-    } catch(e) {}
-  }
 }
 
 function releaseWakeLock() {
   if (wakeLock) { try { wakeLock.release(); } catch(e){} wakeLock = null; }
   if (noSleepVideo) { noSleepVideo.pause(); }
   if (noSleepRefreshId) { clearInterval(noSleepRefreshId); noSleepRefreshId = null; }
-  if (noSleepAudioNode) {
-    try { noSleepAudioNode.osc.stop(); } catch(e){}
-    noSleepAudioNode = null;
-  }
 }
 
-// 画面復帰時にWake Lockを再取得
+// 画面復帰時にWake Lockとオーディオを再取得
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isRunning) {
     requestWakeLock();
+    startAudioKeepAlive();
   }
 });
 
@@ -744,12 +747,15 @@ buildControls();
 resize();
 updateControls();
 
-// Keep screen on while running - 定期チェック
+// 実行中の定期チェック：画面消灯防止＋AudioContext生存を維持
 setInterval(() => {
   if (isRunning) {
     const hasWakeLock = !!wakeLock;
     const hasVideo = noSleepVideo && !noSleepVideo.paused;
     if (!hasWakeLock && !hasVideo) requestWakeLock();
+    // AudioContextが眠っていたら起こし、キープアライブを維持（アラーム保険）
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    startAudioKeepAlive();
   } else {
     releaseWakeLock();
   }
