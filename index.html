@@ -55,11 +55,12 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 #labels{display:flex;align-items:center;justify-content:center;margin-top:calc(var(--dh)*0.06)}
 .label{font-size:13px;font-weight:700;letter-spacing:2.5px;color:rgba(255,255,255,0.38);text-align:center;font-stretch:expanded}
 .label-pair{width:calc(var(--dw)*2 + var(--inner-gap))}
+.label-triple{width:calc(var(--dw)*3 + var(--inner-gap)*2)}
 .label-gap{width:calc(var(--dw)*0.14*2 + var(--dw)*0.22)}
 
-/* Presets */
-#presets{display:flex;gap:10px;padding-bottom:8px}
-#presets button{border:none;font-size:16px;font-weight:700;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.14);border-radius:20px;width:50px;height:34px;cursor:pointer;font-family:system-ui,-apple-system,sans-serif}
+/* Presets — 多数のボタンを折り返して中央寄せ */
+#presets{display:flex;flex-wrap:wrap;gap:6px 7px;justify-content:center;max-width:min(680px,94vw);padding-bottom:8px}
+#presets button{border:none;font-size:15px;font-weight:700;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.14);border-radius:16px;min-width:42px;height:32px;padding:0 7px;cursor:pointer;font-family:system-ui,-apple-system,sans-serif}
 #presets button.active{color:#fff;background:rgba(64,115,235,0.9)}
 #presets button:disabled{opacity:0.3}
 
@@ -97,7 +98,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
     <div id="controls"></div>
   </div>
 </div>
-<div id="ver" style="position:fixed;bottom:2px;right:6px;font-size:10px;color:rgba(255,255,255,0.15);z-index:1">v9</div>
+<div id="ver" style="position:fixed;bottom:2px;right:6px;font-size:10px;color:rgba(255,255,255,0.15);z-index:1">v10</div>
 <div id="overlay">
   <h1>TIME'S UP</h1>
   <button onclick="doReset()">リスタート</button>
@@ -108,15 +109,16 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 let totalSeconds = 0, initialSeconds = 0, isRunning = false, isFinished = false;
 let timerInterval = null;
 let selectedSound = localStorage.getItem('alarmSound') || 'チャイム';
-const presets = [0, 30, 35, 40, 45, 50, 55, 60];
+const presets = [0, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
 const soundNames = ['チャイム', '鈴', 'ダブル'];
+const MAX_SECONDS = 59999; // 999分59秒（分は最大3桁）
 let audioCtx = null, currentSource = null, chimeBuffer = null;
 
-// ── Computed ──
-function getHours(){ return Math.floor(totalSeconds / 3600); }
-function getMinutes(){ return Math.floor((totalSeconds % 3600) / 60); }
+// ── Computed ── 常に「分:秒」表示（時間に繰り上げない）
+function getTotalMinutes(){ return Math.floor(totalSeconds / 60); }
 function getSeconds(){ return totalSeconds % 60; }
-function showHours(){ return totalSeconds >= 3600 || initialSeconds >= 3600; }
+// 分が100以上なら3桁表示。カウントダウン中に桁数が変わらないようinitialSecondsも考慮
+function show3Min(){ return Math.floor(Math.max(totalSeconds, initialSeconds) / 60) >= 100; }
 
 // ── Digits state ──
 const digits = {};
@@ -197,36 +199,24 @@ function buildClock() {
   clock.innerHTML = '';
   labels.innerHTML = '';
 
-  const sh = showHours();
+  const m3 = show3Min();
 
-  if (sh) {
-    const hSec = document.createElement('div');
-    hSec.className = 'section';
-    hSec.id = 'sec-hours';
-    const hp = document.createElement('div');
-    hp.className = 'digit-pair';
-    hp.appendChild(createDigit('h0'));
-    hp.appendChild(createDigit('h1'));
-    hSec.appendChild(hp);
-    clock.appendChild(hSec);
-    clock.appendChild(mkSgap());
-    clock.appendChild(mkColon());
-    clock.appendChild(mkSgap());
-  }
-
+  // 分セクション（2桁 or 3桁）
   const mSec = document.createElement('div');
   mSec.className = 'section';
   mSec.id = 'sec-minutes';
   const mp = document.createElement('div');
   mp.className = 'digit-pair';
-  mp.appendChild(createDigit('m0'));
+  if (m3) mp.appendChild(createDigit('m0'));
   mp.appendChild(createDigit('m1'));
+  mp.appendChild(createDigit('m2'));
   mSec.appendChild(mp);
   clock.appendChild(mSec);
   clock.appendChild(mkSgap());
   clock.appendChild(mkColon());
   clock.appendChild(mkSgap());
 
+  // 秒セクション（常に2桁）
   const sSec = document.createElement('div');
   sSec.className = 'section';
   sSec.id = 'sec-seconds';
@@ -238,28 +228,18 @@ function buildClock() {
   clock.appendChild(sSec);
 
   // Labels
-  if (sh) {
-    const hl = document.createElement('div');
-    hl.className = 'label label-pair';
-    hl.textContent = 'HOUR';
-    labels.appendChild(hl);
-    const hg = document.createElement('div');
-    hg.className = 'label-gap';
-    labels.appendChild(hg);
-  }
   const ml = document.createElement('div');
-  ml.className = 'label label-pair';
-  ml.textContent = 'MIN';
+  ml.className = 'label ' + (m3 ? 'label-triple' : 'label-pair');
+  ml.textContent = '分';
   labels.appendChild(ml);
   const mg = document.createElement('div');
   mg.className = 'label-gap';
   labels.appendChild(mg);
   const sl = document.createElement('div');
   sl.className = 'label label-pair';
-  sl.textContent = 'SEC';
+  sl.textContent = '秒';
   labels.appendChild(sl);
 
-  setupSwipe('sec-hours', 'hours');
   setupSwipe('sec-minutes', 'minutes');
   setupSwipe('sec-seconds', 'seconds');
 
@@ -279,24 +259,27 @@ function mkSgap() {
 }
 
 function updateDigits() {
-  const h = getHours(), m = getMinutes(), s = getSeconds();
-  if (showHours()) {
-    setDigit('h0', Math.floor(h / 10));
-    setDigit('h1', h % 10);
+  const m = getTotalMinutes(), s = getSeconds();
+  if (show3Min()) {
+    setDigit('m0', Math.floor(m / 100) % 10);
+    setDigit('m1', Math.floor(m / 10) % 10);
+    setDigit('m2', m % 10);
+  } else {
+    setDigit('m1', Math.floor(m / 10) % 10);
+    setDigit('m2', m % 10);
   }
-  setDigit('m0', Math.floor(m / 10));
-  setDigit('m1', m % 10);
   setDigit('s0', Math.floor(s / 10));
   setDigit('s1', s % 10);
 }
 
 // ── Sizing ──
-let lastShowH = null;
+let lastM3 = null;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   const isLandscape = w > h;
-  const sh = showHours();
-  const wFactor = sh ? 7.18 : 4.62;
+  const m3 = show3Min();
+  // 桁数に応じた横幅係数（分2桁:4.62 / 分3桁:5.68）
+  const wFactor = m3 ? 5.68 : 4.62;
   const aspect = 1.65;
 
   // Orientation-adaptive: less space for controls in landscape
@@ -321,8 +304,8 @@ function resize() {
   const bp = document.getElementById('bottom-panel');
   if (bp) bp.style.gap = isLandscape ? '2px' : '4px';
 
-  if (lastShowH !== sh) {
-    lastShowH = sh;
+  if (lastM3 !== m3) {
+    lastM3 = m3;
     buildClock();
   }
 }
@@ -447,16 +430,7 @@ function doReset() {
 }
 function adjustMinutes(d) {
   if (isRunning) return;
-  totalSeconds = Math.max(0, Math.min(totalSeconds + d * 60, 359999));
-  initialSeconds = totalSeconds;
-  isFinished = false;
-  resize();
-  updateDigits();
-  updatePresets();
-}
-function adjustHours(d) {
-  if (isRunning) return;
-  totalSeconds = Math.max(0, Math.min(totalSeconds + d * 3600, 359999));
+  totalSeconds = Math.max(0, Math.min(totalSeconds + d * 60, MAX_SECONDS));
   initialSeconds = totalSeconds;
   isFinished = false;
   resize();
@@ -465,7 +439,7 @@ function adjustHours(d) {
 }
 function adjustSeconds(d) {
   if (isRunning) return;
-  totalSeconds = Math.max(0, Math.min(totalSeconds + d, 359999));
+  totalSeconds = Math.max(0, Math.min(totalSeconds + d, MAX_SECONDS));
   initialSeconds = totalSeconds;
   isFinished = false;
   resize();
@@ -493,8 +467,7 @@ function setupSwipe(sectionId, unit) {
     const delta = newSteps - steps;
     if (delta !== 0) {
       steps = newSteps;
-      if (unit === 'hours') adjustHours(delta);
-      else if (unit === 'minutes') adjustMinutes(delta);
+      if (unit === 'minutes') adjustMinutes(delta);
       else adjustSeconds(delta);
     }
   }, { passive: false });
